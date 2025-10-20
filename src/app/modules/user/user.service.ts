@@ -1,23 +1,32 @@
 import { prisma } from "../../shared/prisma";
-import { createPatient } from "./user.interface";
-import bcrypt from "bcryptjs"
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { UserValidation } from "./user.validation";
 
-const createPatient = async(paylod: createPatient)=>{
-    const hashPass = await bcrypt.hash(paylod.password, Number(process.env.BCRYPT_SALTROUND));
 
-    const result = await prisma.$transaction(async(tnx)=>{
+type TCreatePatientPayload = z.infer<typeof UserValidation.createPatientValidationSchema>;
+
+const createPatient = async (paylod: TCreatePatientPayload) => {
+    const { password, patient } = paylod;
+
+    const hashPass = await bcrypt.hash(password, Number(process.env.BCRYPT_SALTROUND));
+
+    const result = await prisma.$transaction(async (tnx) => {
         await tnx.user.create({
-            data:{
-                email: paylod.email,
+            data: {
+                email: patient.email,
                 password: hashPass
             }
-        })
-        return await tnx.patient.create({
-            data:{
-                name: paylod.name,
-                email: paylod.email
+        });
+        
+        const createdPatient = await tnx.patient.create({
+            data: {
+                name: patient.name,   
+                email: patient.email,
+                profilePhoto: patient.profilePhoto 
             }
-        })
+        });
+        return createdPatient;
     });
     return result;
 };
