@@ -6,6 +6,7 @@ import { AdminController } from "./admin.controller";
 
 const router = express.Router();
 
+router.get("/all-user", AdminController.getAllUser);
 router.post("/create-admin", 
     fileUploder.upload.single("file"),
     async(req: Request, res: Response, next: NextFunction)=>{
