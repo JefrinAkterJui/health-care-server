@@ -13,7 +13,7 @@ declare global {
 const auth = (...roles: string[])=>{
     return async(req: Request, res: Response, next: NextFunction)=>{
         try {
-            const token = req.cookies.refreshToken;
+            const token = req.cookies.accessToken;
             if(!token){
                 throw new Error("You are not authorized!");
             }
