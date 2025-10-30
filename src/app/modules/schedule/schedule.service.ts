@@ -1,5 +1,8 @@
 import { addHours, format, addMinutes, addDays } from "date-fns";
 import { prisma } from "../../shared/prisma";
+import { Prisma } from "@prisma/client";
+import { calculatePagination, IOptions } from "../../helper/paginationHelper";
+import { IJWTPayload } from "../../types/common";
 
 const insertIntoDB = async (payload: any) => {
 
@@ -58,6 +61,85 @@ const insertIntoDB = async (payload: any) => {
     return schedules;
 }
 
+const schedulesForDoctor = async (
+    user: IJWTPayload,
+    fillters: any,
+    options: IOptions
+) => {
+    const { page, limit, skip, sortBy, sortOrder } = calculatePagination(options);
+    const { startDateTime: filterStartDateTime, endDateTime: filterEndDateTime } = fillters;
+
+    const andConditions: Prisma.ScheduleWhereInput[] = [];
+
+    if (filterStartDateTime && filterEndDateTime) {
+        andConditions.push({
+            AND: [
+                {
+                    startDateTime: {
+                        gte: filterStartDateTime
+                    }
+                },
+                {
+                    endDateTime: {
+                        lte: filterEndDateTime
+                    }
+                }
+            ]
+        })
+    }
+
+    const whereConditions: Prisma.ScheduleWhereInput = andConditions.length > 0 ? {
+        AND: andConditions
+    } : {}
+
+
+    const doctorSchedules = await prisma.doctorSchedules.findMany({
+        where: {
+            doctor: {
+                email: user.email
+            }
+        },
+        select: {
+            scheduleId: true
+        }
+    });
+
+    const doctorScheduleIds = doctorSchedules.map(schedule => schedule.scheduleId);
+
+    const result = await prisma.schedule.findMany({
+        where: {
+            ...whereConditions,
+            id: {
+                in: doctorScheduleIds 
+            }
+        },
+        skip,
+        take: limit,
+        orderBy: {
+            [sortBy]: sortOrder
+        }
+    });
+
+    const total = await prisma.schedule.count({
+        where: {
+            ...whereConditions,
+            id: {
+                in: doctorScheduleIds 
+            }
+        }
+    });
+
+    return {
+        meta: {
+            page,
+            limit,
+            total
+        },
+        data: result
+    };
+}
+
 export const ScheduleService = {
-    insertIntoDB
+    insertIntoDB,
+    schedulesForDoctor
 }
