@@ -10,6 +10,10 @@ router.get(
     auth(UserRole.DOCTOR, UserRole.DOCTOR),
     ScheduleController.schedulesForDoctor
 );
+router.get(
+    '/all',
+    ScheduleController.getAllSchedules
+);
 
 router.delete(
     "/:id",
