@@ -9,6 +9,12 @@ router.get(
     "/",
     auth(UserRole.DOCTOR, UserRole.DOCTOR),
     ScheduleController.schedulesForDoctor
+);
+
+router.delete(
+    "/:id",
+    // auth(UserRole.ADMIN),
+    ScheduleController.deleteScheduleFromDB
 )
 
 router.post("/create", ScheduleController.createSchedule);
