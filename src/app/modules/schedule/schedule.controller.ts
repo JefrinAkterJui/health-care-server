@@ -51,8 +51,26 @@ const deleteScheduleFromDB = catchAsync(async (req: Request, res: Response) => {
     })
 })
 
+const getAllSchedules = catchAsync(async (req: Request, res: Response) => {
+
+    const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]) as IOptions;
+    const fillters = pick(req.query, ["startDateTime", "endDateTime"])
+
+    const result = await ScheduleService.getAllSchedules(fillters, options);
+
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "All schedules fetched successfully!",
+        meta: result.meta,
+        data: result.data
+    })
+})
+
+
 export const ScheduleController = {
     createSchedule,
     schedulesForDoctor,
+    getAllSchedules,
     deleteScheduleFromDB
 }

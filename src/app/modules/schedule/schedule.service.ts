@@ -139,6 +139,61 @@ const schedulesForDoctor = async (
     };
 }
 
+
+const getAllSchedules = async (
+    fillters: any,
+    options: IOptions
+) => {
+    const { page, limit, skip, sortBy, sortOrder } = calculatePagination(options);
+    const { startDateTime: filterStartDateTime, endDateTime: filterEndDateTime } = fillters;
+
+    const andConditions: Prisma.ScheduleWhereInput[] = [];
+
+
+    if (filterStartDateTime && filterEndDateTime) {
+        andConditions.push({
+            AND: [
+                {
+                    startDateTime: {
+                        gte: filterStartDateTime
+                    }
+                },
+                {
+                    endDateTime: {
+                        lte: filterEndDateTime
+                    }
+                }
+            ]
+        })
+    }
+
+    const whereConditions: Prisma.ScheduleWhereInput = andConditions.length > 0 ? {
+        AND: andConditions
+    } : {}
+
+    const result = await prisma.schedule.findMany({
+        where: whereConditions,
+        skip,
+        take: limit,
+        orderBy: {
+            [sortBy]: sortOrder
+        }
+    });
+
+    const total = await prisma.schedule.count({
+        where: whereConditions
+    });
+
+    return {
+        meta: {
+            page,
+            limit,
+            total
+        },
+        data: result
+    };
+}
+
 const deleteScheduleFromDB = async (id: string) => {
     return await prisma.schedule.delete({
         where: {
@@ -150,5 +205,6 @@ const deleteScheduleFromDB = async (id: string) => {
 export const ScheduleService = {
     insertIntoDB,
     schedulesForDoctor,
+    getAllSchedules,
     deleteScheduleFromDB
 }
