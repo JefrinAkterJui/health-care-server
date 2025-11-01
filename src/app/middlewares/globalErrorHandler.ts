@@ -1,40 +1,46 @@
+import { Prisma } from "@prisma/client";
 import { NextFunction, Request, Response } from "express"
 import httpStatus from "http-status"
-import { StatusCodes } from "http-status-codes";
-import { ZodError, ZodIssue } from "zod" 
-
-
-const handleZodError = (err: ZodError) => {
-    const firstIssue = err.issues[0];
-
-    const message = firstIssue.message;
-
-    const errorDetails = err.issues.map((issue: ZodIssue) => {
-        return {
-            field: issue.path[issue.path.length - 1] || "unknown_field",
-            message: issue.message
-        }
-    });
-
-    return {
-        message: message, 
-        error: errorDetails
-    }
-}
 
 const globalErrorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-
-    let statusCode: number = httpStatus.INTERNAL_SERVER_ERROR;
+    console.log(err)
+    let statusCode: number = err.statusCode || httpStatus.INTERNAL_SERVER_ERROR;
     let success = false;
     let message = err.message || "Something went wrong!";
     let error = err;
 
-    if (err instanceof ZodError) {
-        const formattedError = handleZodError(err);
-        
-        statusCode = httpStatus.BAD_REQUEST;
-        message = formattedError.message;
-        error = formattedError.error;
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === "P2002") {
+            message = "Duplicate key error",
+                error = err.meta,
+                statusCode = httpStatus.CONFLICT
+        }
+        if (err.code === "P1000") {
+            message = "Authentication failed against database server",
+                error = err.meta,
+                statusCode = httpStatus.BAD_GATEWAY
+        }
+        if (err.code === "P2003") {
+            message = "Foreign key constraint failed",
+                error = err.meta,
+                statusCode = httpStatus.BAD_REQUEST
+        }
+    }
+
+    else if (err instanceof Prisma.PrismaClientValidationError) {
+        message = "Validation Error",
+            error = err.message,
+            statusCode = httpStatus.BAD_REQUEST
+    }
+    else if (err instanceof Prisma.PrismaClientUnknownRequestError) {
+        message = "Unknown Prisma error occured!",
+            error = err.message,
+            statusCode = httpStatus.BAD_REQUEST
+    }
+    else if (err instanceof Prisma.PrismaClientInitializationError) {
+        message = "Prisma client failed to initialize!",
+            error = err.message,
+            statusCode = httpStatus.BAD_REQUEST
     }
 
     res.status(statusCode).json({
