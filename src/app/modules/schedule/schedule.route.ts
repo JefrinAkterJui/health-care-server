@@ -17,7 +17,7 @@ router.get(
 
 router.delete(
     "/:id",
-    // auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN),
     ScheduleController.deleteScheduleFromDB
 )
 
