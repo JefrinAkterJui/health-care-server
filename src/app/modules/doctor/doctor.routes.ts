@@ -7,6 +7,10 @@ import { UserRole } from "@prisma/client";
 
 const router = express.Router();
 
+router.get(
+    "/",
+    DoctorController.getAllFromDB
+);
 router.post("/create-doctor", 
     auth(UserRole.ADMIN),
     fileUploder.upload.single("file"),
