@@ -26,4 +26,10 @@ router.post("/create-doctor",
     DoctorController.createDoctor
 );
 
+router.patch(
+    "/:id",
+    auth(UserRole.ADMIN, UserRole.DOCTOR),
+    DoctorController.updateIntoDB
+);
+
 export const DoctorRouter = router;
