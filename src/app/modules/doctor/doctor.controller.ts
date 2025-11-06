@@ -3,6 +3,9 @@ import catchAsync from "../../shared/catchAsync";
 import { fileUploder } from "../../helper/fileUploder";
 import sendResponse from "../../shared/sendResponse";
 import { DoctorService } from "./doctor.service";
+import { pick } from "../../helper/pick";
+import { doctorFilterableFields } from "./doctor.constant";
+import { IOptions } from "../../helper/paginationHelper";
 
 const createDoctor = catchAsync(async(req: Request, res: Response)=>{
     const paylod = req.body;
@@ -21,6 +24,22 @@ const createDoctor = catchAsync(async(req: Request, res: Response)=>{
     })
 });
 
+const getAllFromDB = catchAsync(async (req: Request, res: Response) => {
+    const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]) as IOptions;
+    const fillters = pick(req.query, doctorFilterableFields)
+
+    const result = await DoctorService.getAllFromDB(fillters, options);
+
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "Doctor fetched successfully!",
+        meta: result.meta,
+        data: result.data
+    })
+})
+
 export const DoctorController ={
-    createDoctor
+    createDoctor,
+    getAllFromDB
 }
