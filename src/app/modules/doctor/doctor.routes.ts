@@ -11,6 +11,14 @@ router.get(
     "/",
     DoctorController.getAllFromDB
 );
+router.post(
+    '/get-suggestions',
+    // auth(ENUM_USER_ROLE.PATIENT),
+    DoctorController.suggestDoctors
+);
+
+router.get('/:id', DoctorController.getByIdFromDB);
+
 router.post("/create-doctor", 
     auth(UserRole.ADMIN),
     fileUploder.upload.single("file"),
@@ -26,16 +34,22 @@ router.post("/create-doctor",
     DoctorController.createDoctor
 );
 
-router.post(
-    '/get-suggestions',
-    // auth(ENUM_USER_ROLE.PATIENT),
-    DoctorController.suggestDoctors
-);
 
 router.patch(
     "/:id",
     auth(UserRole.ADMIN, UserRole.DOCTOR),
     DoctorController.updateIntoDB
 );
+
+router.delete(
+    '/:id',
+    auth(UserRole.ADMIN),
+    DoctorController.deleteFromDB
+);
+
+router.delete(
+    '/soft/:id',
+    auth(UserRole.ADMIN),
+    DoctorController.softDelete);
 
 export const DoctorRouter = router;
