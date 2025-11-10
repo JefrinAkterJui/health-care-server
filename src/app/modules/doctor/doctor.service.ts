@@ -6,6 +6,10 @@ import { Prisma, UserRole } from "@prisma/client";
 import { doctorSearchableFields } from "./doctor.constant";
 import { calculatePagination, IOptions } from "../../helper/paginationHelper";
 import { IDoctorUpdateInput } from "./doctor.interface";
+import ApiError from "../../error/ApiError";
+import { StatusCodes } from "http-status-codes";
+import { openai } from "../../helper/openAi";
+import { getSpecialtiesFromSymptoms } from "../../helper/aiService";
 
 type TCreateDoctorPayload = z.infer<typeof DoctorValidation.createDoctorValidationSchema>;
 
@@ -163,9 +167,56 @@ const updateIntoDB = async (id: string, payload: Partial<IDoctorUpdateInput>) =>
 
 }
 
+const getAISuggestions = async (payload: { symptoms: string }) => {
+    if (!(payload && payload.symptoms)) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, "symptoms is required!");
+    }
+    const relevantSpecialties = await getSpecialtiesFromSymptoms(payload.symptoms);
+
+    if (!relevantSpecialties || relevantSpecialties.length === 0) {
+        throw new ApiError(StatusCodes.NOT_FOUND, "Could not determine any relevant specialty for these symptoms.");
+    }
+    
+    console.log(`AI suggested specialties: ${relevantSpecialties.join(', ')}`);
+
+    const doctors = await prisma.doctor.findMany({
+        where: {
+            isDeleted: false,
+            doctorSpecialties: {
+                some: { 
+                    specialities: {
+                        title: {
+                            in: relevantSpecialties, 
+                            mode: 'insensitive' 
+                        }
+                    }
+                }
+            }
+        },
+        include: {
+            doctorSpecialties: {
+                include: {
+                    specialities: true
+                }
+            }
+        },
+        orderBy: {
+            experience: 'desc' 
+        },
+        take: 10
+    });
+
+    if (!doctors || doctors.length === 0) {
+        throw new ApiError(StatusCodes.NOT_FOUND, "No doctors found matching the suggested specialties.");
+    }
+    return doctors;
+}
+
+
 
 export const DoctorService={
     createDoctor,
     getAllFromDB,
-    updateIntoDB
+    updateIntoDB,
+    getAISuggestions
 }
