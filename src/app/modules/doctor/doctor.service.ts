@@ -2,13 +2,12 @@ import z from "zod";
 import { DoctorValidation } from "./doctor.validation";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../shared/prisma";
-import { Prisma, UserRole } from "@prisma/client";
+import { Doctor, Prisma, UserRole, UserStatus } from "@prisma/client";
 import { doctorSearchableFields } from "./doctor.constant";
 import { calculatePagination, IOptions } from "../../helper/paginationHelper";
 import { IDoctorUpdateInput } from "./doctor.interface";
 import ApiError from "../../error/ApiError";
 import { StatusCodes } from "http-status-codes";
-import { openai } from "../../helper/openAi";
 import { getSpecialtiesFromSymptoms } from "../../helper/aiService";
 
 type TCreateDoctorPayload = z.infer<typeof DoctorValidation.createDoctorValidationSchema>;
@@ -212,11 +211,77 @@ const getAISuggestions = async (payload: { symptoms: string }) => {
     return doctors;
 }
 
+const getByIdFromDB = async (id: string): Promise<Doctor | null> => {
+    const result = await prisma.doctor.findUnique({
+        where: {
+            id,
+            isDeleted: false,
+        },
+        include: {
+            doctorSpecialties: {
+                include: {
+                    specialities: true,
+                },
+            },
+            doctorSchedules: {
+                include: {
+                    schedule: true
+                }
+            }
+        },
+    });
+    return result;
+};
+
+const deleteFromDB = async (id: string): Promise<Doctor> => {
+    return await prisma.$transaction(async (transactionClient) => {
+        const deleteDoctor = await transactionClient.doctor.delete({
+            where: {
+                id,
+            },
+        });
+
+        await transactionClient.user.delete({
+            where: {
+                email: deleteDoctor.email,
+            },
+        });
+
+        return deleteDoctor;
+    });
+};
+
+const softDelete = async (id: string): Promise<Doctor> => {
+    return await prisma.$transaction(async (transactionClient) => {
+        const deleteDoctor = await transactionClient.doctor.update({
+            where: { id },
+            data: {
+                isDeleted: true,
+            },
+        });
+
+        await transactionClient.user.update({
+            where: {
+                email: deleteDoctor.email,
+            },
+            data: {
+                status: UserStatus.DELETED,
+            },
+        });
+
+        return deleteDoctor;
+    });
+};
+
+
 
 
 export const DoctorService={
     createDoctor,
     getAllFromDB,
     updateIntoDB,
-    getAISuggestions
+    getAISuggestions,
+    getByIdFromDB,
+    deleteFromDB,
+    softDelete
 }
