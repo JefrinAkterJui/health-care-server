@@ -26,6 +26,12 @@ router.post("/create-doctor",
     DoctorController.createDoctor
 );
 
+router.post(
+    '/get-suggestions',
+    // auth(ENUM_USER_ROLE.PATIENT),
+    DoctorController.suggestDoctors
+);
+
 router.patch(
     "/:id",
     auth(UserRole.ADMIN, UserRole.DOCTOR),

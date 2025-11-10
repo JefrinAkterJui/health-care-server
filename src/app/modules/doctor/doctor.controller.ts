@@ -6,6 +6,7 @@ import { DoctorService } from "./doctor.service";
 import { pick } from "../../helper/pick";
 import { doctorFilterableFields } from "./doctor.constant";
 import { IOptions } from "../../helper/paginationHelper";
+import { StatusCodes } from "http-status-codes";
 
 const createDoctor = catchAsync(async(req: Request, res: Response)=>{
     const paylod = req.body;
@@ -53,8 +54,21 @@ const updateIntoDB = catchAsync(async (req: Request, res: Response) => {
     })
 })
 
+const suggestDoctors = catchAsync(async (req: Request, res: Response) => {
+
+    const result = await DoctorService.getAISuggestions(req.body);
+
+    sendResponse(res, {
+        statusCode: StatusCodes.OK,
+        success: true,
+        message: 'Successfully retrieved doctor suggestions!',
+        data: result,
+    });
+});
+
 export const DoctorController ={
     createDoctor,
     getAllFromDB,
-    updateIntoDB
+    updateIntoDB,
+    suggestDoctors
 }
